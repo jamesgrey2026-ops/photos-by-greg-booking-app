@@ -16,6 +16,14 @@ from flask_restful import Api
 from models import db
 from resources.bookings import BookingListResource, BookingResource
 from resources.clients import ClientListResource, ClientResource
+from resources.platform import (
+    SchoolListResource, YearbookProjectListResource, YearbookProjectResource,
+    StudentListResource, StudentResource, PageListResource, PageResource,
+    ProfileListResource, SocialLinkListResource, LifeEventListResource,
+    GalleryListResource, PhotoListResource, ProductListResource,
+    OrderListResource, AdminDashboardResource,
+)
+from seed_data import seed_demo_data
 
 
 def create_app():
@@ -68,6 +76,23 @@ def create_app():
         BookingListResource,
         "/api/bookings"
     )
+
+    # Enhanced photography, Yearbook SaaS, gallery and commerce routes
+    api.add_resource(SchoolListResource, "/api/schools")
+    api.add_resource(YearbookProjectListResource, "/api/yearbook-projects")
+    api.add_resource(YearbookProjectResource, "/api/yearbook-projects/<int:project_id>")
+    api.add_resource(StudentListResource, "/api/students")
+    api.add_resource(StudentResource, "/api/students/<int:student_id>")
+    api.add_resource(PageListResource, "/api/yearbook-pages")
+    api.add_resource(PageResource, "/api/yearbook-pages/<int:page_id>")
+    api.add_resource(ProfileListResource, "/api/connected-profiles")
+    api.add_resource(SocialLinkListResource, "/api/social-links")
+    api.add_resource(LifeEventListResource, "/api/life-events")
+    api.add_resource(GalleryListResource, "/api/galleries")
+    api.add_resource(PhotoListResource, "/api/photos")
+    api.add_resource(ProductListResource, "/api/products")
+    api.add_resource(OrderListResource, "/api/orders")
+    api.add_resource(AdminDashboardResource, "/api/admin/dashboard")
     api.add_resource(
         BookingResource,
         "/api/bookings/<int:booking_id>"
@@ -113,6 +138,8 @@ def create_app():
     # Gunicorn on Azure. Existing tables and records are preserved.
     with app.app_context():
         db.create_all()
+        if os.environ.get("SEED_DEMO_DATA", "false").lower() == "true":
+            seed_demo_data()
 
     return app
 

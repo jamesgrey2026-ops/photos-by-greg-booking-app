@@ -1,5 +1,7 @@
 # Photos by Greg — Full-Stack Studio Management
 
+> The `feature/enhanced-platform-mvp` branch adds the Yearbook SaaS, portfolio/gallery, Stay Connected, merchandise and administration CRM foundation. See [Enhanced Platform MVP](docs/enhanced-platform.md).
+
 Capstone Milestones 3 and 4 for Davis Digital Services. Customers can request photography sessions through a React interface, while studio staff can retrieve bookings, update their status, and delete them. Flask REST APIs validate every operation and SQLAlchemy persists clients and bookings in a normalized relational database.
 
 ## Architecture

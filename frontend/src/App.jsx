@@ -1046,7 +1046,7 @@ export default function App() {
     ["admin", "⌁", "Admin CRM"],
   ];
   return (
-    <div className={`workspace-shell ${view === "book" ? "booking-mode" : ""}`}>
+    <div className="workspace-shell">
       <aside className="workspace-sidebar">
         <button className="workspace-brand" onClick={() => setView("book")}>
           <span className="workspace-camera">▣</span>

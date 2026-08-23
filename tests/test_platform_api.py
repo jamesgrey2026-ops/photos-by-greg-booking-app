@@ -111,6 +111,33 @@ class EnhancedPlatformTests(unittest.TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.get_json()["status"], status)
 
+    def test_merchandise_cart_accepts_multiple_products_and_purple_shirt(self):
+        gallery = self.client.post("/api/galleries", json={"title": "Graduation Cart"}).get_json()
+        photo = self.client.post("/api/photos", json={
+            "galleryId": gallery["id"], "imageUrl": "/demo/graduation-cart.jpg",
+            "portfolioConsent": True, "merchandiseAllowed": True,
+        }).get_json()
+        shirt = self.client.post("/api/products", json={
+            "name": "Classic Photo T-Shirt", "category": "Shirts", "priceCents": 2999,
+        }).get_json()
+        mug = self.client.post("/api/products", json={
+            "name": "Keepsake Photo Mug", "category": "Gifts", "priceCents": 1899,
+        }).get_json()
+        response = self.client.post("/api/orders", json={
+            "customerName": "Taylor Morgan", "customerEmail": "taylor@example.com",
+            "items": [
+                {"productId": shirt["id"], "photoId": photo["id"], "quantity": 2,
+                 "size": "XL", "color": "Northwestern Purple"},
+                {"productId": mug["id"], "photoId": photo["id"], "quantity": 1,
+                 "size": "Standard", "color": "White"},
+            ],
+        })
+        self.assertEqual(response.status_code, 201)
+        order = response.get_json()
+        self.assertEqual(len(order["items"]), 2)
+        self.assertEqual(order["totalCents"], 7897)
+        self.assertEqual(order["items"][0]["color"], "Northwestern Purple")
+
     def test_ai_photo_assistant_requires_consent_and_human_approval(self):
         gallery = self.client.post("/api/galleries", json={"title": "Graduation", "category": "Graduation"}).get_json()
         blocked = self.client.post("/api/photos", json={

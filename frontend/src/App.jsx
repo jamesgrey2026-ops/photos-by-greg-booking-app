@@ -922,6 +922,10 @@ function PlatformView({ view }) {
   const [adminModule, setAdminModule] = useState("Dashboard");
   const [adminSearch, setAdminSearch] = useState("");
   const [schoolForm, setSchoolForm] = useState({ name: "", coordinatorName: "", coordinatorEmail: "", enrollment: "" });
+  const [merchForm, setMerchForm] = useState({ productId: "", photoId: "", size: "L", color: "Black", quantity: 1, customerName: "Taylor Morgan", customerEmail: "taylor.morgan@example.com" });
+  const [orderResult, setOrderResult] = useState(null);
+  const [analysis, setAnalysis] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const load = useCallback(async () => {
     setBusy(true);
@@ -963,6 +967,41 @@ function PlatformView({ view }) {
     } catch (err) { setError(err.message); }
   }
 
+  async function submitMerchOrder(event) {
+    event.preventDefault();
+    setSubmitting(true);
+    setError("");
+    try {
+      const order = await platformApi.orders.create({
+        customerName: merchForm.customerName,
+        customerEmail: merchForm.customerEmail,
+        items: [{ productId: Number(merchForm.productId), photoId: Number(merchForm.photoId),
+          size: merchForm.size, color: merchForm.color, quantity: Number(merchForm.quantity) }],
+      });
+      setOrderResult(order);
+      await load();
+    } catch (err) { setError(err.message); }
+    finally { setSubmitting(false); }
+  }
+
+  async function advanceOrder(order) {
+    const statuses = ["ordered", "printing", "out_for_delivery", "delivered"];
+    const next = statuses[statuses.indexOf(order.status) + 1];
+    if (!next) return;
+    try { await platformApi.orders.update(order.id, { status: next }); await load(); }
+    catch (err) { setError(err.message); }
+  }
+
+  async function analyzePhoto() {
+    try { setAnalysis(await platformApi.assistant.analyze(Number(merchForm.photoId))); }
+    catch (err) { setError(err.message); }
+  }
+
+  async function approveAnalysis() {
+    try { setAnalysis(await platformApi.assistant.approve(Number(merchForm.photoId))); }
+    catch (err) { setError(err.message); }
+  }
+
   if (busy) return <main className="platform-main"><EmptyState>Loading {viewLabels[view]}…</EmptyState></main>;
 
   if (view === "admin") {
@@ -995,12 +1034,24 @@ function PlatformView({ view }) {
             <button onClick={() => setAdminModule("Galleries")}><Metric value={d.publishedGalleries || 0} label="Published galleries" tone="amber" /></button>
             <button onClick={() => setAdminModule("Orders")}><Metric value={`$${((d.merchandiseRevenueCents || 0) / 100).toFixed(2)}`} label="Merchandise revenue" /></button>
           </section>
-          <section className="crm-dashboard-grid">
+          {adminModule === "Orders" && <section className="crm-orders-view">
+            <div className="order-pipeline">{["Ordered", "Printing", "Out for Delivery", "Delivered"].map((stage) => <span key={stage}>{stage}</span>)}</div>
+            <div className="crm-order-list">{data.orders.length ? data.orders.map((order) => {
+              const item = order.items[0] || {};
+              const nextLabels = { ordered: "Send to printing", printing: "Mark out for delivery", out_for_delivery: "Mark delivered" };
+              return <article className="crm-order-card" key={order.id}>
+                <img src={item.photoUrl || "/demo/northwestern-graduation-group.jpg"} alt={item.photoTitle || "Ordered photograph"} />
+                <div><span className={`order-status ${order.status}`}>{order.status.replaceAll("_", " ")}</span><h2>Order #{order.id} · {order.customerName}</h2><p>{item.productName} · {item.color} · {item.size} · Qty {item.quantity}</p><small>{order.customerEmail}</small></div>
+                <div className="order-card-actions"><strong>${order.total.toFixed(2)}</strong>{nextLabels[order.status] && <button onClick={() => advanceOrder(order)}>{nextLabels[order.status]} →</button>}</div>
+              </article>;
+            }) : <EmptyState>No merchandise orders yet.</EmptyState>}</div>
+          </section>}
+          {adminModule !== "Orders" && <section className="crm-dashboard-grid">
             <article className="crm-panel crm-bookings"><header><div><h2>Upcoming bookings</h2><span>{filteredBookings.length} records</span></div><button onClick={() => setAdminModule("Bookings")}>View all</button></header>{filteredBookings.length ? <div className="crm-table"><div className="crm-table-head"><span>Date</span><span>Customer / Event</span><span>Type</span><span>Status</span></div>{filteredBookings.slice(0, 6).map((booking) => <div className="crm-table-row" key={booking.id}><span>{formatDate(booking.preferredDate)}</span><span><strong>{booking.name}</strong><small>{booking.email}</small></span><span>{booking.sessionType}</span><span><em className={`status-chip ${booking.status}`}>{booking.status}</em></span></div>)}</div> : <EmptyState>No matching bookings yet.</EmptyState>}</article>
             <article className="crm-panel crm-calendar"><header><div><h2>Upcoming calendar</h2><span>Central Time</span></div><button onClick={() => setAdminModule("Calendar")}>View calendar</button></header>{filteredBookings.slice(0, 5).map((booking, index) => <div className="calendar-row" key={booking.id}><time><b>{formatDate(booking.preferredDate).split(" ")[1]?.replace(",", "") || index + 1}</b><small>{formatDate(booking.preferredDate).split(" ")[0]}</small></time><div><strong>{booking.name}</strong><span>{booking.sessionType}</span></div><i>{booking.status}</i></div>)}{!filteredBookings.length && <EmptyState>No scheduled sessions.</EmptyState>}</article>
             <article className="crm-panel crm-projects"><header><div><h2>Active school / yearbook projects</h2><span>{filteredProjects.length} workspaces</span></div><button onClick={() => setAdminModule("Yearbooks")}>View all projects</button></header>{filteredProjects.length ? <div className="crm-table"><div className="crm-project-head"><span>School</span><span>Plan</span><span>Progress</span><span>Portraits</span><span>Pages</span></div>{filteredProjects.map((project) => <div className="crm-project-row" key={project.id}><span><strong>{project.schoolName}</strong><small>{project.schoolYear}</small></span><span>{project.plan}</span><span><b>{project.metrics.completionPercent}%</b><ProgressBar value={project.metrics.completionPercent} /></span><span>{project.metrics.portraitsReceived} received<br/><small>{project.metrics.missingPortraits} missing</small></span><span>{project.metrics.pagesApproved} / {project.totalPages}</span></div>)}</div> : <EmptyState>No matching school projects.</EmptyState>}</article>
             <article className="crm-panel crm-alerts"><header><div><h2>Alerts</h2><span>Operational attention</span></div><button>View all</button></header>{alerts.map((alert, index) => <button className="alert-row" key={`${alert.title}-${index}`} onClick={() => setAdminModule(alert.target)}><span className={alert.tone}>{alert.count}</span><div><strong>{alert.title}</strong><small>{alert.detail}</small></div><b>›</b></button>)}</article>
-          </section>
+          </section>}
         </section>
       </main>
     );
@@ -1029,7 +1080,28 @@ function PlatformView({ view }) {
   }
 
   if (view === "store") {
-    return <main className="platform-main"><header className="platform-heading"><div><p className="eyebrow">Photo merchandise</p><h1>Create something tangible</h1><p>Choose an authorized gallery image and place it on apparel, gifts or prints.</p></div></header><section className="product-grid">{data.products.length ? data.products.map((product) => <article className="product-card" key={product.id}><div className="product-art">PBG</div><span>{product.category}</span><h2>{product.name}</h2><strong>${product.price.toFixed(2)}</strong><button disabled>Select photo</button></article>) : <EmptyState>The product catalog is ready for shirts, mugs, posters and canvas prints.</EmptyState>}</section></main>;
+    const photos = data.galleries.flatMap((gallery) => gallery.photos || []);
+    const authorizedPhotos = photos.filter((photo) => photo.merchandiseAllowed);
+    const selectedProduct = data.products.find((product) => product.id === Number(merchForm.productId));
+    const selectedPhoto = photos.find((photo) => photo.id === Number(merchForm.photoId));
+    const total = (selectedProduct?.price || 0) * Number(merchForm.quantity || 1);
+    return <main className="platform-main merch-page">
+      <header className="platform-heading"><div><p className="eyebrow">Live merchandise studio</p><h1>Turn a milestone into a keepsake</h1><p>Select an approved photograph, personalize a shirt or mug, preview it, and place a real demo order.</p></div><span className="consent-badge">✓ Consent-aware ordering</span></header>
+      {error && <div className="notice error">{error}</div>}
+      {orderResult && <div className="order-success"><strong>Order #{orderResult.id} submitted.</strong><span>It is now visible in Admin CRM as “Ordered.”</span></div>}
+      <form className="merch-studio" onSubmit={submitMerchOrder}>
+        <section className="merch-builder">
+          <div className="merch-step"><span>1</span><div><h2>Choose a product</h2><p>Shirts and mugs are ready for the live demonstration.</p></div></div>
+          <div className="product-grid compact">{data.products.filter((product) => ["Shirts", "Gifts"].includes(product.category)).map((product) => <button type="button" className={`product-card ${Number(merchForm.productId) === product.id ? "selected" : ""}`} key={product.id} onClick={() => setMerchForm({ ...merchForm, productId: String(product.id), size: product.category === "Shirts" ? "L" : "Standard", color: product.category === "Shirts" ? "Black" : "White" })}><div className="product-art">{product.category === "Shirts" ? "T" : "☕"}</div><span>{product.category}</span><h3>{product.name}</h3><strong>${product.price.toFixed(2)}</strong></button>)}</div>
+          <div className="merch-step"><span>2</span><div><h2>Select an approved photo</h2><p>Only photographs with merchandise consent can be selected.</p></div></div>
+          <div className="photo-picker">{photos.map((photo) => <button type="button" disabled={!photo.merchandiseAllowed} className={Number(merchForm.photoId) === photo.id ? "selected" : ""} key={photo.id} onClick={() => { setMerchForm({ ...merchForm, photoId: String(photo.id) }); setAnalysis(null); }}><img src={photo.imageUrl} alt={photo.title || "Gallery selection"} /><strong>{photo.title}</strong><span>{photo.merchandiseAllowed ? "✓ Approved" : "Consent required"}</span></button>)}</div>
+          {!authorizedPhotos.length && <EmptyState>Add a merchandise-authorized photo to begin.</EmptyState>}
+          <div className="option-grid"><label>Size<select value={merchForm.size} onChange={(e) => setMerchForm({ ...merchForm, size: e.target.value })}>{selectedProduct?.category === "Shirts" ? ["S", "M", "L", "XL", "2XL"].map((size) => <option key={size}>{size}</option>) : <option>Standard</option>}</select></label><label>Color<select value={merchForm.color} onChange={(e) => setMerchForm({ ...merchForm, color: e.target.value })}>{(selectedProduct?.category === "Shirts" ? ["Black", "White", "Navy", "Gold"] : ["White", "Black"]).map((color) => <option key={color}>{color}</option>)}</select></label><label>Quantity<input type="number" min="1" max="25" value={merchForm.quantity} onChange={(e) => setMerchForm({ ...merchForm, quantity: e.target.value })} /></label></div>
+          <div className="ai-assistant"><header><div><p className="eyebrow">AI Photo Assistant</p><h2>Consent-gated creative suggestions</h2></div><button type="button" disabled={!selectedPhoto?.merchandiseAllowed} onClick={analyzePhoto}>Generate suggestions</button></header>{analysis ? <div className="analysis-results"><p><strong>Caption</strong>{analysis.caption}</p><p><strong>Alt text</strong>{analysis.altText}</p><p><strong>Tags</strong>{analysis.tags.join(" · ")}</p><p><strong>Recommendation</strong>{analysis.recommendedCategory}</p><div className="human-review"><span>{analysis.status === "approved" ? "✓ Human approved" : "Human approval required"}</span>{analysis.status !== "approved" && <button type="button" onClick={approveAnalysis}>Approve suggestions</button>}</div></div> : <p>Select an approved image, then generate draft captions, alt text, tags, and a merchandise recommendation.</p>}</div>
+        </section>
+        <aside className="merch-preview-panel"><p className="eyebrow">Live preview</p><div className={`merch-preview ${selectedProduct?.category === "Gifts" ? "mug" : "shirt"}`}><div className="preview-surface">{selectedPhoto ? <img src={selectedPhoto.imageUrl} alt="Product preview" /> : <span>Select a photo</span>}</div></div><h2>{selectedProduct?.name || "Choose a product"}</h2><p>{merchForm.color} · {merchForm.size} · Qty {merchForm.quantity}</p><div className="price-line"><span>Order total</span><strong>${total.toFixed(2)}</strong></div><label>Customer name<input required value={merchForm.customerName} onChange={(e) => setMerchForm({ ...merchForm, customerName: e.target.value })} /></label><label>Email<input required type="email" value={merchForm.customerEmail} onChange={(e) => setMerchForm({ ...merchForm, customerEmail: e.target.value })} /></label><button className="submit-order" disabled={submitting || !selectedProduct || !selectedPhoto}>{submitting ? "Submitting…" : "Submit order →"}</button><small>Demo checkout records the order without collecting payment.</small></aside>
+      </form>
+    </main>;
   }
 
   return null;

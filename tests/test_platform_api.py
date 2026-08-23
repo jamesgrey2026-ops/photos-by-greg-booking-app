@@ -90,6 +90,45 @@ class EnhancedPlatformTests(unittest.TestCase):
         })
         self.assertEqual(order.status_code, 201)
         self.assertEqual(order.get_json()["totalCents"], 5998)
+        self.assertEqual(order.get_json()["status"], "ordered")
+
+    def test_merchandise_order_advances_through_production(self):
+        gallery = self.client.post("/api/galleries", json={"title": "Graduation"}).get_json()
+        photo = self.client.post("/api/photos", json={
+            "galleryId": gallery["id"], "imageUrl": "/demo/graduation.png",
+            "portfolioConsent": True, "merchandiseAllowed": True,
+        }).get_json()
+        product = self.client.post("/api/products", json={
+            "name": "Keepsake Photo Mug", "category": "Gifts", "priceCents": 1899,
+        }).get_json()
+        order = self.client.post("/api/orders", json={
+            "customerName": "Taylor Morgan", "customerEmail": "taylor@example.com",
+            "items": [{"productId": product["id"], "photoId": photo["id"], "quantity": 1,
+                       "size": "Standard", "color": "White"}],
+        }).get_json()
+        for status in ("printing", "out_for_delivery", "delivered"):
+            response = self.client.put(f"/api/orders/{order['id']}", json={"status": status})
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.get_json()["status"], status)
+
+    def test_ai_photo_assistant_requires_consent_and_human_approval(self):
+        gallery = self.client.post("/api/galleries", json={"title": "Graduation", "category": "Graduation"}).get_json()
+        blocked = self.client.post("/api/photos", json={
+            "galleryId": gallery["id"], "imageUrl": "/blocked.png",
+            "portfolioConsent": False, "merchandiseAllowed": True,
+        }).get_json()
+        self.assertEqual(self.client.post(f"/api/photos/{blocked['id']}/analyze").status_code, 403)
+
+        approved = self.client.post("/api/photos", json={
+            "galleryId": gallery["id"], "title": "Graduation Portrait", "imageUrl": "/approved.png",
+            "portfolioConsent": True, "merchandiseAllowed": True,
+        }).get_json()
+        analysis = self.client.post(f"/api/photos/{approved['id']}/analyze")
+        self.assertEqual(analysis.status_code, 200)
+        self.assertEqual(analysis.get_json()["status"], "pending_review")
+        human_review = self.client.put(f"/api/photos/{approved['id']}/analysis", json={"status": "approved"})
+        self.assertEqual(human_review.status_code, 200)
+        self.assertEqual(human_review.get_json()["status"], "approved")
 
     def test_dashboard_aggregates_platform_activity(self):
         self.create_school_project()

@@ -9,8 +9,10 @@ from flask_restful import Resource
 from models import (
     db, Booking, Client, School, YearbookProject, Student, YearbookPage,
     ConnectedProfile, SocialLink, LifeEvent, Gallery, Photo, Product,
-    MerchandiseOrder, OrderItem,
+    MerchandiseOrder, OrderItem, PhotoAnalysis, utc_now,
 )
+
+ORDER_STATUSES = ("ordered", "printing", "out_for_delivery", "delivered")
 
 
 def payload_or_error():
@@ -256,8 +258,10 @@ class OrderListResource(Resource):
         data = payload_or_error()
         if data is None or not data.get("customerName") or not data.get("customerEmail") or not data.get("items"):
             return {"error": "customerName, customerEmail and items are required"}, 400
+        if not isinstance(data["items"], list) or not data["items"]:
+            return {"error": "At least one order item is required"}, 400
         order = MerchandiseOrder(customer_name=data["customerName"].strip(),
-                                 customer_email=data["customerEmail"].strip(), status="payment_pending")
+                                 customer_email=data["customerEmail"].strip(), status="ordered")
         db.session.add(order)
         for item_data in data["items"]:
             product = db.session.get(Product, item_data.get("productId"))
@@ -269,13 +273,79 @@ class OrderListResource(Resource):
             if photo_id and (photo is None or not photo.merchandise_allowed):
                 db.session.rollback()
                 return {"error": "Selected photo is not authorized for merchandise"}, 403
+            quantity = int(item_data.get("quantity", 1))
+            if quantity < 1 or quantity > 25:
+                db.session.rollback()
+                return {"error": "Quantity must be between 1 and 25"}, 400
             order.items.append(OrderItem(product_id=product.id, photo_id=photo_id,
-                                         quantity=max(1, int(item_data.get("quantity", 1))),
+                                         quantity=quantity,
                                          size=item_data.get("size"), color=item_data.get("color"),
                                          unit_price_cents=product.price_cents))
         order.recalculate()
         db.session.commit()
         return order.to_dict(), 201
+
+
+class OrderResource(Resource):
+    def put(self, order_id):
+        order = db.session.get(MerchandiseOrder, order_id)
+        data = payload_or_error()
+        if order is None:
+            return {"error": "Order not found"}, 404
+        if data is None or data.get("status") not in ORDER_STATUSES:
+            return {"error": f"status must be one of {ORDER_STATUSES}"}, 400
+        current_index = ORDER_STATUSES.index(order.status) if order.status in ORDER_STATUSES else -1
+        requested_index = ORDER_STATUSES.index(data["status"])
+        if requested_index != current_index + 1:
+            return {"error": "Orders must advance one production stage at a time"}, 409
+        order.status = data["status"]
+        db.session.commit()
+        return order.to_dict(), 200
+
+
+class PhotoAssistantResource(Resource):
+    """Generate consent-gated, reviewable demo suggestions for a photo."""
+
+    def post(self, photo_id):
+        photo = db.session.get(Photo, photo_id)
+        if photo is None:
+            return {"error": "Photo not found"}, 404
+        if not photo.portfolio_consent or not photo.merchandise_allowed:
+            return {"error": "Image consent is required before AI analysis"}, 403
+
+        title = (photo.title or "Graduation portrait").strip()
+        category = (photo.gallery.category if photo.gallery else None) or "Graduation"
+        analysis = PhotoAnalysis.query.filter_by(photo_id=photo.id).first()
+        if analysis is None:
+            analysis = PhotoAnalysis(
+                photo_id=photo.id,
+                caption=f"Celebrating a milestone: {title}.",
+                alt_text=f"A professionally photographed {title.lower()} from the {category.lower()} gallery.",
+                tags=",".join(dict.fromkeys([category.lower(), "graduation", "portrait", "milestone", "celebration"])),
+                recommended_category="Gifts" if "graduation" in f"{title} {category}".lower() else "Shirts",
+                status="pending_review",
+                provider="consent_safe_demo_assistant",
+            )
+            db.session.add(analysis)
+        else:
+            analysis.status = "pending_review"
+            analysis.approved_at = None
+        db.session.commit()
+        return analysis.to_dict(), 200
+
+
+class PhotoAnalysisResource(Resource):
+    def put(self, photo_id):
+        analysis = PhotoAnalysis.query.filter_by(photo_id=photo_id).first()
+        data = payload_or_error()
+        if analysis is None:
+            return {"error": "Analyze the photo before approval"}, 404
+        if data is None or data.get("status") != "approved":
+            return {"error": "status must be approved"}, 400
+        analysis.status = "approved"
+        analysis.approved_at = utc_now()
+        db.session.commit()
+        return analysis.to_dict(), 200
 
 
 class AdminDashboardResource(Resource):

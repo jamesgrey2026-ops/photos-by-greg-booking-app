@@ -21,7 +21,8 @@ from resources.platform import (
     StudentListResource, StudentResource, PageListResource, PageResource,
     ProfileListResource, SocialLinkListResource, LifeEventListResource,
     GalleryListResource, PhotoListResource, ProductListResource,
-    OrderListResource, AdminDashboardResource,
+    OrderListResource, OrderResource, PhotoAssistantResource,
+    PhotoAnalysisResource, AdminDashboardResource,
 )
 from seed_data import seed_demo_data
 
@@ -92,6 +93,9 @@ def create_app():
     api.add_resource(PhotoListResource, "/api/photos")
     api.add_resource(ProductListResource, "/api/products")
     api.add_resource(OrderListResource, "/api/orders")
+    api.add_resource(OrderResource, "/api/orders/<int:order_id>")
+    api.add_resource(PhotoAssistantResource, "/api/photos/<int:photo_id>/analyze")
+    api.add_resource(PhotoAnalysisResource, "/api/photos/<int:photo_id>/analysis")
     api.add_resource(AdminDashboardResource, "/api/admin/dashboard")
     api.add_resource(
         BookingResource,

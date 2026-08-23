@@ -243,11 +243,37 @@ class Photo(db.Model):
     image_url = db.Column(db.String(1000), nullable=False)
     portfolio_consent = db.Column(db.Boolean, nullable=False, default=False)
     merchandise_allowed = db.Column(db.Boolean, nullable=False, default=False)
+    analysis = db.relationship("PhotoAnalysis", backref="photo", uselist=False, cascade="all, delete-orphan")
 
     def to_dict(self):
         return {"id": self.id, "galleryId": self.gallery_id, "title": self.title,
                 "imageUrl": self.image_url, "portfolioConsent": self.portfolio_consent,
                 "merchandiseAllowed": self.merchandise_allowed}
+
+
+class PhotoAnalysis(db.Model):
+    __tablename__ = "photo_analyses"
+    id = db.Column(db.Integer, primary_key=True)
+    photo_id = db.Column(db.Integer, db.ForeignKey("photos.id", ondelete="CASCADE"), nullable=False, unique=True)
+    caption = db.Column(db.String(300), nullable=False)
+    alt_text = db.Column(db.String(500), nullable=False)
+    tags = db.Column(db.String(500), nullable=False)
+    recommended_category = db.Column(db.String(80), nullable=False)
+    status = db.Column(db.String(30), nullable=False, default="pending_review")
+    provider = db.Column(db.String(50), nullable=False, default="demo_assistant")
+    created_at = db.Column(db.DateTime(timezone=True), default=utc_now)
+    approved_at = db.Column(db.DateTime(timezone=True))
+
+    def to_dict(self):
+        return {
+            "id": self.id, "photoId": self.photo_id, "caption": self.caption,
+            "altText": self.alt_text,
+            "tags": [tag for tag in self.tags.split(",") if tag],
+            "recommendedCategory": self.recommended_category,
+            "status": self.status, "provider": self.provider,
+            "createdAt": self.created_at.isoformat() if self.created_at else None,
+            "approvedAt": self.approved_at.isoformat() if self.approved_at else None,
+        }
 
 
 class Product(db.Model):
@@ -279,6 +305,7 @@ class MerchandiseOrder(db.Model):
     def to_dict(self):
         return {"id": self.id, "customerName": self.customer_name, "customerEmail": self.customer_email,
                 "status": self.status, "totalCents": self.total_cents, "total": round(self.total_cents / 100, 2),
+                "createdAt": self.created_at.isoformat() if self.created_at else None,
                 "items": [item.to_dict() for item in self.items]}
 
 
@@ -298,5 +325,7 @@ class OrderItem(db.Model):
     def to_dict(self):
         return {"id": self.id, "productId": self.product_id,
                 "productName": self.product.name if self.product else None,
-                "photoId": self.photo_id, "quantity": self.quantity, "size": self.size,
+                "photoId": self.photo_id, "photoTitle": self.photo.title if self.photo else None,
+                "photoUrl": self.photo.image_url if self.photo else None,
+                "quantity": self.quantity, "size": self.size,
                 "color": self.color, "unitPriceCents": self.unit_price_cents}

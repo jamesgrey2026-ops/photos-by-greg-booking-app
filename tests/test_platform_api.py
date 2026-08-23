@@ -5,6 +5,7 @@ from datetime import date, timedelta
 
 from app import create_app
 from models import db
+from seed_data import seed_demo_data
 
 
 class EnhancedPlatformTests(unittest.TestCase):
@@ -137,6 +138,16 @@ class EnhancedPlatformTests(unittest.TestCase):
         self.assertEqual(len(order["items"]), 2)
         self.assertEqual(order["totalCents"], 7897)
         self.assertEqual(order["items"][0]["color"], "Northwestern Purple")
+
+    def test_demo_catalog_includes_extended_merchandise_products(self):
+        with self.app.app_context():
+            seed_demo_data()
+        products = self.client.get("/api/products").get_json()
+        names = {product["name"] for product in products}
+        self.assertTrue({
+            "Classic Photo T-Shirt", "Keepsake Photo Mug", "Personalized Photo Hat",
+            "Graduation Photo Cube", "Custom Photo Sticker Pack", "Keepsake Photo Magnet",
+        }.issubset(names))
 
     def test_ai_photo_assistant_requires_consent_and_human_approval(self):
         gallery = self.client.post("/api/galleries", json={"title": "Graduation", "category": "Graduation"}).get_json()

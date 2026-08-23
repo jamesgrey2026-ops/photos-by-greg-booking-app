@@ -83,8 +83,16 @@ def seed_demo_data():
     second_photo.portfolio_consent = True
     second_photo.merchandise_allowed = True
 
-    product_specs = [("Classic Photo T-Shirt", "Shirts", 2999), ("Premium Photo Hoodie", "Apparel", 5499),
-                     ("Keepsake Photo Mug", "Gifts", 1899), ("Gallery Canvas Print", "Wall Art", 6999)]
+    product_specs = [
+        ("Classic Photo T-Shirt", "Shirts", 2999),
+        ("Premium Photo Hoodie", "Apparel", 5499),
+        ("Keepsake Photo Mug", "Gifts", 1899),
+        ("Personalized Photo Hat", "Headwear", 2499),
+        ("Graduation Photo Cube", "Desk Decor", 2799),
+        ("Custom Photo Sticker Pack", "Stickers", 999),
+        ("Keepsake Photo Magnet", "Magnets", 1299),
+        ("Gallery Canvas Print", "Wall Art", 6999),
+    ]
     products = {}
     for name, category, price in product_specs:
         products[name] = first_or_create(Product, name=name,

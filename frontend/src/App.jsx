@@ -923,6 +923,7 @@ function PlatformView({ view }) {
   const [adminSearch, setAdminSearch] = useState("");
   const [schoolForm, setSchoolForm] = useState({ name: "", coordinatorName: "", coordinatorEmail: "", enrollment: "" });
   const [merchForm, setMerchForm] = useState({ productId: "", photoId: "", size: "L", color: "Black", quantity: 1, customerName: "Taylor Morgan", customerEmail: "taylor.morgan@example.com" });
+  const [cart, setCart] = useState([]);
   const [orderResult, setOrderResult] = useState(null);
   const [analysis, setAnalysis] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -967,18 +968,58 @@ function PlatformView({ view }) {
     } catch (err) { setError(err.message); }
   }
 
+  function addToCart(product, photo) {
+    if (!product || !photo?.merchandiseAllowed) {
+      setError("Choose a product and an approved photograph before adding an item.");
+      return;
+    }
+    const item = {
+      productId: product.id,
+      productName: product.name,
+      productCategory: product.category,
+      photoId: photo.id,
+      photoTitle: photo.title,
+      photoUrl: photo.imageUrl,
+      size: merchForm.size,
+      color: merchForm.color,
+      quantity: Number(merchForm.quantity || 1),
+      unitPrice: product.price,
+    };
+    setCart((current) => {
+      const index = current.findIndex((entry) => entry.productId === item.productId && entry.photoId === item.photoId && entry.size === item.size && entry.color === item.color);
+      if (index < 0) return [...current, item];
+      return current.map((entry, entryIndex) => entryIndex === index ? { ...entry, quantity: Math.min(25, entry.quantity + item.quantity) } : entry);
+    });
+    setOrderResult(null);
+    setError("");
+  }
+
+  function updateCartQuantity(index, quantity) {
+    const nextQuantity = Math.max(1, Math.min(25, Number(quantity || 1)));
+    setCart((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, quantity: nextQuantity } : item));
+  }
+
+  function removeCartItem(index) {
+    setCart((current) => current.filter((_, itemIndex) => itemIndex !== index));
+  }
+
   async function submitMerchOrder(event) {
     event.preventDefault();
+    if (!cart.length) {
+      setError("Add at least one item to the shopping cart before checkout.");
+      return;
+    }
     setSubmitting(true);
     setError("");
     try {
       const order = await platformApi.orders.create({
         customerName: merchForm.customerName,
         customerEmail: merchForm.customerEmail,
-        items: [{ productId: Number(merchForm.productId), photoId: Number(merchForm.photoId),
-          size: merchForm.size, color: merchForm.color, quantity: Number(merchForm.quantity) }],
+        items: cart.map((item) => ({ productId: item.productId, photoId: item.photoId,
+          size: item.size, color: item.color, quantity: item.quantity })),
       });
       setOrderResult(order);
+      setCart([]);
       await load();
     } catch (err) { setError(err.message); }
     finally { setSubmitting(false); }
@@ -1041,7 +1082,7 @@ function PlatformView({ view }) {
               const nextLabels = { ordered: "Send to printing", printing: "Mark out for delivery", out_for_delivery: "Mark delivered" };
               return <article className="crm-order-card" key={order.id}>
                 <img src={item.photoUrl || "/demo/northwestern-graduation-group.jpg"} alt={item.photoTitle || "Ordered photograph"} />
-                <div><span className={`order-status ${order.status}`}>{order.status.replaceAll("_", " ")}</span><h2>Order #{order.id} · {order.customerName}</h2><p>{item.productName} · {item.color} · {item.size} · Qty {item.quantity}</p><small>{order.customerEmail}</small></div>
+                <div><span className={`order-status ${order.status}`}>{order.status.replaceAll("_", " ")}</span><h2>Order #{order.id} · {order.customerName}</h2>{order.items.map((orderItem) => <p key={orderItem.id}>{orderItem.productName} · {orderItem.color} · {orderItem.size} · Qty {orderItem.quantity}</p>)}<small>{order.customerEmail}</small></div>
                 <div className="order-card-actions"><strong>${order.total.toFixed(2)}</strong>{nextLabels[order.status] && <button onClick={() => advanceOrder(order)}>{nextLabels[order.status]} →</button>}</div>
               </article>;
             }) : <EmptyState>No merchandise orders yet.</EmptyState>}</div>
@@ -1085,8 +1126,14 @@ function PlatformView({ view }) {
     const selectedProduct = data.products.find((product) => product.id === Number(merchForm.productId));
     const selectedPhoto = photos.find((photo) => photo.id === Number(merchForm.photoId));
     const total = (selectedProduct?.price || 0) * Number(merchForm.quantity || 1);
+    const cartSubtotal = cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+    const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+    const shirtColors = ["Black", "White", "Northwestern Purple", "Navy", "Gold", "Heather Gray", "Burgundy", "Forest Green"];
+    const productColors = selectedProduct?.category === "Shirts" ? shirtColors : ["White", "Black", "Northwestern Purple"];
+    const colorValues = { Black: "#242321", White: "#f6f2e9", "Northwestern Purple": "#4e2a84", Navy: "#172a46", Gold: "#d99a16", "Heather Gray": "#929292", Burgundy: "#6d213c", "Forest Green": "#294c3a" };
+    const previewColor = colorValues[merchForm.color] || "#242321";
     return <main className="platform-main merch-page">
-      <header className="platform-heading"><div><p className="eyebrow">Live merchandise studio</p><h1>Turn a milestone into a keepsake</h1><p>Select an approved photograph, personalize a shirt or mug, preview it, and place a real demo order.</p></div><span className="consent-badge">✓ Consent-aware ordering</span></header>
+      <header className="platform-heading"><div><p className="eyebrow">Live merchandise studio</p><h1>Turn a milestone into a keepsake</h1><p>Customize approved photographs, add multiple products to your cart, and check out when everything looks right.</p></div><span className="consent-badge">✓ Consent-aware ordering</span></header>
       {error && <div className="notice error">{error}</div>}
       {orderResult && <div className="order-success"><strong>Order #{orderResult.id} submitted.</strong><span>It is now visible in Admin CRM as “Ordered.”</span></div>}
       <form className="merch-studio" onSubmit={submitMerchOrder}>
@@ -1096,10 +1143,11 @@ function PlatformView({ view }) {
           <div className="merch-step"><span>2</span><div><h2>Select an approved photo</h2><p>Only photographs with merchandise consent can be selected.</p></div></div>
           <div className="photo-picker">{photos.map((photo) => <button type="button" disabled={!photo.merchandiseAllowed} className={Number(merchForm.photoId) === photo.id ? "selected" : ""} key={photo.id} onClick={() => { setMerchForm({ ...merchForm, photoId: String(photo.id) }); setAnalysis(null); }}><img src={photo.imageUrl} alt={photo.title || "Gallery selection"} /><strong>{photo.title}</strong><span>{photo.merchandiseAllowed ? "✓ Approved" : "Consent required"}</span></button>)}</div>
           {!authorizedPhotos.length && <EmptyState>Add a merchandise-authorized photo to begin.</EmptyState>}
-          <div className="option-grid"><label>Size<select value={merchForm.size} onChange={(e) => setMerchForm({ ...merchForm, size: e.target.value })}>{selectedProduct?.category === "Shirts" ? ["S", "M", "L", "XL", "2XL"].map((size) => <option key={size}>{size}</option>) : <option>Standard</option>}</select></label><label>Color<select value={merchForm.color} onChange={(e) => setMerchForm({ ...merchForm, color: e.target.value })}>{(selectedProduct?.category === "Shirts" ? ["Black", "White", "Navy", "Gold"] : ["White", "Black"]).map((color) => <option key={color}>{color}</option>)}</select></label><label>Quantity<input type="number" min="1" max="25" value={merchForm.quantity} onChange={(e) => setMerchForm({ ...merchForm, quantity: e.target.value })} /></label></div>
+          <div className="option-grid"><label>Size<select value={merchForm.size} onChange={(e) => setMerchForm({ ...merchForm, size: e.target.value })}>{selectedProduct?.category === "Shirts" ? ["S", "M", "L", "XL", "2XL"].map((size) => <option key={size}>{size}</option>) : <option>Standard</option>}</select></label><label>Color<select value={merchForm.color} onChange={(e) => setMerchForm({ ...merchForm, color: e.target.value })}>{productColors.map((color) => <option key={color}>{color}</option>)}</select></label><label>Quantity<input type="number" min="1" max="25" value={merchForm.quantity} onChange={(e) => setMerchForm({ ...merchForm, quantity: e.target.value })} /></label></div>
+          <div className="color-swatches" aria-label="Product colors">{productColors.map((color) => <button type="button" key={color} className={merchForm.color === color ? "selected" : ""} onClick={() => setMerchForm({ ...merchForm, color })}><span style={{ background: colorValues[color] }} />{color}</button>)}</div>
           <div className="ai-assistant"><header><div><p className="eyebrow">AI Photo Assistant</p><h2>Consent-gated creative suggestions</h2></div><button type="button" disabled={!selectedPhoto?.merchandiseAllowed} onClick={analyzePhoto}>Generate suggestions</button></header>{analysis ? <div className="analysis-results"><p><strong>Caption</strong>{analysis.caption}</p><p><strong>Alt text</strong>{analysis.altText}</p><p><strong>Tags</strong>{analysis.tags.join(" · ")}</p><p><strong>Recommendation</strong>{analysis.recommendedCategory}</p><div className="human-review"><span>{analysis.status === "approved" ? "✓ Human approved" : "Human approval required"}</span>{analysis.status !== "approved" && <button type="button" onClick={approveAnalysis}>Approve suggestions</button>}</div></div> : <p>Select an approved image, then generate draft captions, alt text, tags, and a merchandise recommendation.</p>}</div>
         </section>
-        <aside className="merch-preview-panel"><p className="eyebrow">Live preview</p><div className={`merch-preview ${selectedProduct?.category === "Gifts" ? "mug" : "shirt"}`}><div className="preview-surface">{selectedPhoto ? <img src={selectedPhoto.imageUrl} alt="Product preview" /> : <span>Select a photo</span>}</div></div><h2>{selectedProduct?.name || "Choose a product"}</h2><p>{merchForm.color} · {merchForm.size} · Qty {merchForm.quantity}</p><div className="price-line"><span>Order total</span><strong>${total.toFixed(2)}</strong></div><label>Customer name<input required value={merchForm.customerName} onChange={(e) => setMerchForm({ ...merchForm, customerName: e.target.value })} /></label><label>Email<input required type="email" value={merchForm.customerEmail} onChange={(e) => setMerchForm({ ...merchForm, customerEmail: e.target.value })} /></label><button className="submit-order" disabled={submitting || !selectedProduct || !selectedPhoto}>{submitting ? "Submitting…" : "Submit order →"}</button><small>Demo checkout records the order without collecting payment.</small></aside>
+        <aside className="merch-preview-panel"><p className="eyebrow">Live preview</p><div className={`merch-preview ${selectedProduct?.category === "Gifts" ? "mug" : "shirt"}`} style={{ background: previewColor }}><div className="preview-surface">{selectedPhoto ? <img src={selectedPhoto.imageUrl} alt="Product preview" /> : <span>Select a photo</span>}</div></div><h2>{selectedProduct?.name || "Choose a product"}</h2><p>{merchForm.color} · {merchForm.size} · Qty {merchForm.quantity}</p><div className="price-line"><span>Item total</span><strong>${total.toFixed(2)}</strong></div><button type="button" className="add-to-cart" disabled={!selectedProduct || !selectedPhoto} onClick={() => addToCart(selectedProduct, selectedPhoto)}>Add to cart →</button><section className="shopping-cart"><header><div><p className="eyebrow">Shopping cart</p><h2>Review your order</h2></div><span className="cart-count">{cartCount} {cartCount === 1 ? "item" : "items"}</span></header>{cart.length ? <div className="cart-items">{cart.map((item, index) => <article className="cart-item" key={`${item.productId}-${item.photoId}-${item.size}-${item.color}`}><img src={item.photoUrl} alt={item.photoTitle || "Cart photograph"} /><div><strong>{item.productName}</strong><span>{item.color} · {item.size}</span><label>Qty<input type="number" min="1" max="25" value={item.quantity} onChange={(event) => updateCartQuantity(index, event.target.value)} /></label></div><div><b>${(item.unitPrice * item.quantity).toFixed(2)}</b><button type="button" onClick={() => removeCartItem(index)}>Remove</button></div></article>)}</div> : <p className="empty-cart">Your cart is empty. Customize a product and add it above.</p>}<div className="cart-subtotal"><span>Subtotal</span><strong>${cartSubtotal.toFixed(2)}</strong></div><label>Customer name<input required value={merchForm.customerName} onChange={(e) => setMerchForm({ ...merchForm, customerName: e.target.value })} /></label><label>Email<input required type="email" value={merchForm.customerEmail} onChange={(e) => setMerchForm({ ...merchForm, customerEmail: e.target.value })} /></label><button className="submit-order" disabled={submitting || !cart.length}>{submitting ? "Checking out…" : `Checkout ${cartCount || ""} ${cartCount === 1 ? "item" : "items"} →`}</button><small>Demo checkout records the cart without collecting payment.</small></section></aside>
       </form>
     </main>;
   }

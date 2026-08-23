@@ -97,8 +97,12 @@ Open `http://localhost:5173`.
 | `DATABASE_URL` | SQLAlchemy database connection | `postgresql+psycopg://postgres:password@localhost:5432/studio_management` |
 | `FRONTEND_ORIGINS` | Comma-separated CORS allowlist | `http://localhost:5173` |
 | `VITE_API_BASE_URL` | Frontend API location during development | `http://localhost:5000/api` |
+| `SEED_DEMO_DATA` | Load the idempotent capstone demonstration records | `true` |
 
 Real credentials belong only in local environment files or the cloud secret manager. `.env` files are excluded from Git.
+
+Demo seeding is enabled by default for the capstone presentation. Set
+`SEED_DEMO_DATA=false` in Azure after the expo to stop loading demonstration records.
 
 ## API endpoints
 
@@ -108,6 +112,10 @@ Real credentials belong only in local environment files or the cloud secret mana
 | `GET`, `PUT`, `DELETE` | `/api/bookings/<id>` | Retrieve, update, or delete one booking |
 | `GET`, `POST` | `/api/clients` | List or create clients |
 | `GET`, `PUT`, `DELETE` | `/api/clients/<id>` | Retrieve, update, or delete one client |
+| `GET`, `POST` | `/api/orders` | List or submit merchandise orders |
+| `PUT` | `/api/orders/<id>` | Advance an order through the production pipeline |
+| `POST` | `/api/photos/<id>/analyze` | Generate consent-gated photo suggestions |
+| `PUT` | `/api/photos/<id>/analysis` | Record human approval of AI suggestions |
 | `GET` | `/health` | Deployment health check |
 
 See `API_List.md` for request and response examples.
@@ -134,7 +142,7 @@ The evidence package is in:
 - `docs/cloud-run-deployment.md`
 - `docs/dry-run-script.md`
 
-The current automated result is **6 tests passed**. Cloud-result cells must be completed only after testing the public deployment.
+The current automated result is **12 tests passed**. Cloud-result cells must be completed only after testing the public deployment.
 
 ## Production container
 

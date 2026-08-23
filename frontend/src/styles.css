@@ -116,6 +116,85 @@ body {
   .onboarding-form h2, .onboarding-form button { grid-column: auto; }
 }
 
+/* Merchandise ordering demonstration */
+.merch-page { max-width: 1500px; margin: 0 auto; }
+.merch-page .platform-heading { display: flex; gap: 24px; justify-content: space-between; align-items: end; }
+.consent-badge { padding: 10px 14px; border: 1px solid #cbd8b9; border-radius: 999px; color: #49672f; background: #f3f7ed; font-weight: 800; white-space: nowrap; }
+.order-success { display: flex; gap: 8px; margin-bottom: 18px; padding: 14px 18px; border: 1px solid #bcd8ae; border-radius: 10px; color: #315823; background: #f1f8ed; flex-direction: column; }
+.merch-studio { display: grid; gap: 24px; grid-template-columns: minmax(0, 1.55fr) minmax(310px, .7fr); align-items: start; }
+.merch-builder, .merch-preview-panel, .ai-assistant { border: 1px solid #ded8ce; border-radius: 14px; background: #fff; box-shadow: 0 8px 28px rgba(38,34,28,.06); }
+.merch-builder { padding: 24px; }
+.merch-step { display: flex; gap: 13px; margin: 10px 0 16px; align-items: center; }
+.merch-step > span { display: grid; width: 34px; height: 34px; border-radius: 50%; color: #fff; background: #df9205; place-items: center; font-weight: 900; }
+.merch-step h2, .merch-step p { margin: 0; }
+.merch-step p { margin-top: 4px; color: #7a746c; }
+.product-grid.compact { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.product-grid.compact .product-card { width: 100%; color: inherit; text-align: left; cursor: pointer; }
+.product-card.selected, .photo-picker button.selected { border-color: #df9205; box-shadow: 0 0 0 3px rgba(223,146,5,.14); }
+.photo-picker { display: grid; gap: 12px; margin-bottom: 20px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.photo-picker button { overflow: hidden; padding: 0 0 11px; border: 1px solid #ded8ce; border-radius: 10px; color: #29251f; background: #fff; text-align: left; }
+.photo-picker button:disabled { opacity: .48; filter: grayscale(.8); }
+.photo-picker img { width: 100%; height: 140px; object-fit: cover; }
+.photo-picker strong, .photo-picker span { display: block; padding: 7px 11px 0; }
+.photo-picker span { color: #5d773e; font-size: .72rem; font-weight: 800; }
+.option-grid { display: grid; gap: 12px; margin: 18px 0 22px; grid-template-columns: repeat(3, 1fr); }
+.option-grid label, .merch-preview-panel label { display: grid; gap: 6px; color: #4f493f; font-size: .78rem; font-weight: 800; }
+.option-grid select, .option-grid input, .merch-preview-panel input { width: 100%; padding: 11px; border: 1px solid #d8d1c5; border-radius: 8px; background: #fff; }
+.ai-assistant { padding: 19px; background: linear-gradient(135deg, #fffaf0, #f7f7f1); }
+.ai-assistant header { display: flex; gap: 15px; justify-content: space-between; align-items: center; }
+.ai-assistant h2, .ai-assistant p { margin: 0; }
+.ai-assistant header button, .human-review button { padding: 10px 13px; border: 0; border-radius: 7px; color: #fff; background: #516f38; font-weight: 800; }
+.analysis-results { display: grid; gap: 9px; margin-top: 16px; grid-template-columns: repeat(2, 1fr); }
+.analysis-results > p { padding: 11px; border: 1px solid #e4dfd3; border-radius: 8px; background: rgba(255,255,255,.75); }
+.analysis-results strong { display: block; margin-bottom: 4px; color: #9c6500; font-size: .7rem; text-transform: uppercase; }
+.human-review { display: flex; grid-column: 1 / -1; padding-top: 8px; align-items: center; justify-content: space-between; font-weight: 800; }
+.merch-preview-panel { position: sticky; top: 24px; padding: 22px; }
+.merch-preview { display: grid; min-height: 330px; margin: 14px 0 20px; background: #242321; clip-path: polygon(19% 7%, 34% 0, 42% 7%, 58% 7%, 66% 0, 81% 7%, 100% 23%, 88% 40%, 82% 34%, 82% 100%, 18% 100%, 18% 34%, 12% 40%, 0 23%); place-items: center; }
+.merch-preview.mug { min-height: 265px; margin-inline: 30px; border-radius: 15px 15px 42px 42px; background: #f5f1e9; clip-path: none; box-shadow: inset 0 0 0 4px #ded7ca; }
+.preview-surface { display: grid; overflow: hidden; width: 46%; aspect-ratio: 1; border: 1px dashed rgba(255,255,255,.45); color: #fff; place-items: center; }
+.mug .preview-surface { width: 58%; border-color: #b8ae9e; color: #7f7568; }
+.preview-surface img { width: 100%; height: 100%; object-fit: cover; }
+.merch-preview-panel h2 { margin-bottom: 3px; }
+.merch-preview-panel > p { color: #746d64; }
+.price-line { display: flex; margin: 18px 0; padding: 16px 0; border-block: 1px solid #e4ded4; justify-content: space-between; align-items: center; }
+.price-line strong { color: #d48200; font-size: 1.65rem; }
+.merch-preview-panel label { margin-top: 12px; }
+.submit-order { width: 100%; margin-top: 18px; padding: 14px; border: 0; border-radius: 8px; color: #fff; background: linear-gradient(135deg, #ce8000, #efa918); font-weight: 900; }
+.submit-order:disabled { opacity: .45; }
+.merch-preview-panel > small { display: block; margin-top: 10px; color: #827b72; text-align: center; }
+
+/* CRM order production pipeline */
+.crm-orders-view { display: grid; gap: 16px; }
+.order-pipeline { display: grid; grid-template-columns: repeat(4, 1fr); overflow: hidden; border: 1px solid #dfe4ec; border-radius: 10px; background: #fff; }
+.order-pipeline span { position: relative; padding: 14px; color: #4d5a6e; text-align: center; font-weight: 800; }
+.order-pipeline span + span { border-left: 1px solid #e6e9ef; }
+.crm-order-list { display: grid; gap: 11px; }
+.crm-order-card { display: grid; gap: 16px; padding: 15px; border: 1px solid #e0e5ed; border-radius: 11px; background: #fff; grid-template-columns: 74px minmax(0, 1fr) auto; align-items: center; }
+.crm-order-card img { width: 74px; height: 74px; border-radius: 9px; object-fit: cover; }
+.crm-order-card h2, .crm-order-card p { margin: 4px 0; }
+.crm-order-card p, .crm-order-card small { color: #788397; }
+.order-status { display: inline-block; padding: 4px 8px; border-radius: 999px; color: #7b4c00; background: #fff0cc; font-size: .68rem; font-weight: 900; text-transform: uppercase; }
+.order-status.printing { color: #34557c; background: #e4effc; }
+.order-status.out_for_delivery { color: #67457f; background: #f0e6f7; }
+.order-status.delivered { color: #356124; background: #e8f4e2; }
+.order-card-actions { display: grid; gap: 9px; justify-items: end; }
+.order-card-actions strong { font-size: 1.18rem; }
+.order-card-actions button { padding: 9px 12px; border: 0; border-radius: 7px; color: #fff; background: #df9205; font-weight: 800; }
+
+@media (max-width: 980px) {
+  .merch-studio { grid-template-columns: 1fr; }
+  .merch-preview-panel { position: static; }
+}
+
+@media (max-width: 650px) {
+  .merch-page .platform-heading { align-items: start; flex-direction: column; }
+  .product-grid.compact, .photo-picker, .option-grid, .analysis-results { grid-template-columns: 1fr; }
+  .crm-order-card { grid-template-columns: 58px 1fr; }
+  .crm-order-card img { width: 58px; height: 58px; }
+  .order-card-actions { grid-column: 1 / -1; justify-items: stretch; }
+  .order-pipeline { grid-template-columns: repeat(2, 1fr); }
+}
+
 button,
 input,
 select,

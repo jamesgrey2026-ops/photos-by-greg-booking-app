@@ -67,5 +67,10 @@ export const platformApi = {
   orders: {
     list: () => request("/orders"),
     create: (data) => request("/orders", { method: "POST", body: JSON.stringify(data) }),
+    update: (id, data) => request(`/orders/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  },
+  assistant: {
+    analyze: (photoId) => request(`/photos/${photoId}/analyze`, { method: "POST" }),
+    approve: (photoId) => request(`/photos/${photoId}/analysis`, { method: "PUT", body: JSON.stringify({ status: "approved" }) }),
   },
 };

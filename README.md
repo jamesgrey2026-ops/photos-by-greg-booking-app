@@ -1,165 +1,113 @@
-# Photos by Greg — Full-Stack Studio Management
+# Photos by Greg — Full-Stack Photography Platform
 
-> The `feature/enhanced-platform-mvp` branch adds the Yearbook SaaS, portfolio/gallery, Stay Connected, merchandise and administration CRM foundation. See [Enhanced Platform MVP](docs/enhanced-platform.md).
+[![Production](https://img.shields.io/badge/production-Azure%20Container%20Apps-0078D4)](https://photos-by-greg-app.bluewater-75d91b54.westus2.azurecontainerapps.io)
 
-Capstone Milestones 3 and 4 for Davis Digital Services. Customers can request photography sessions through a React interface, while studio staff can retrieve bookings, update their status, and delete them. Flask REST APIs validate every operation and SQLAlchemy persists clients and bookings in a normalized relational database.
+Photos by Greg connects customer booking, consent-aware galleries, yearbook production, customer profiles, personalized merchandise, an AI Photo Assistant, and administrative CRM workflows in one React/Flask application.
+
+- **Live application:** [photos-by-greg-app.bluewater-75d91b54.westus2.azurecontainerapps.io](https://photos-by-greg-app.bluewater-75d91b54.westus2.azurecontainerapps.io)
+- **Health check:** [production `/health`](https://photos-by-greg-app.bluewater-75d91b54.westus2.azurecontainerapps.io/health)
+- **Complete documentation:** [`/docs`](docs/README.md)
 
 ## Architecture
 
-```text
-React UI → Flask REST API → SQLAlchemy → PostgreSQL
+```mermaid
+flowchart LR
+    B["React browser UI"] -->|HTTPS /api| A["Flask + Gunicorn<br/>Azure Container App"]
+    A -->|SQLAlchemy| D["Azure PostgreSQL"]
+    G["GitHub Actions"] -->|OIDC + Docker image| A
 ```
 
 - **Frontend:** React 19 and Vite
-- **Backend:** Flask, Flask-RESTful, Flask-CORS
-- **Data:** SQLAlchemy with PostgreSQL; SQLite fallback for local demonstration
-- **Production:** Docker, Gunicorn, Google Cloud Run–ready
+- **Backend:** Flask, Flask-RESTful, Flask-CORS, Flask-SQLAlchemy
+- **Database:** Azure Database for PostgreSQL; SQLite fallback for local development
+- **Runtime:** Multi-stage Docker image and Gunicorn on port 8080
+- **Hosting:** Azure Container Apps, Azure Container Registry, Log Analytics/Azure Monitor
+- **Delivery:** GitHub Actions with Azure OIDC and revision-based deployment
 
-React never connects directly to the database. In production, Flask serves the compiled React assets and `/api` endpoints from one HTTPS origin.
+## Key workflows
 
-## Features
-
-- Responsive customer booking form
-- Required-field, email, and future-date validation
-- Persistent booking dashboard
-- Create, retrieve, update, and delete operations
-- Loading, success, empty, and controlled failure states
-- Duplicate-submit prevention
-- Environment-restricted CORS
-- Transaction rollback and safe database errors
-- Automated API integration tests
-- Containerized cloud deployment
+- Responsive session booking for individuals, families, schools, organizations, and yearbooks
+- Portfolio galleries with publication consent
+- Yearbook schools, projects, students, pages, progress, and approvals
+- Customer social links and life events
+- Merchandise product selection, approved photos, live preview, cart, checkout confirmation, and order status
+- Consent-gated AI caption, alt-text, tag, and product suggestions with mandatory human approval
+- Admin CRM for bookings, customers, projects, galleries, and orders
 
 ## Repository structure
 
 ```text
-frontend/                 React application and API client
-resources/                Flask booking and client endpoints
-tests/                    Automated API integration tests
-docs/                     Test evidence, debugging log, deployment, dry-run script
+frontend/                 React application, API client, and production assets
+resources/                Flask REST resources
+tests/                    API/database integration tests
+docs/                     Production support, setup, troubleshooting, usage, and architecture
 app.py                    Flask application factory and route registration
-models.py                 SQLAlchemy Client and Booking models
-schema.sql                PostgreSQL schema and sample data
+models.py                 SQLAlchemy domain models
+seed_data.py              Idempotent capstone demonstration data
+schema.sql                Original PostgreSQL schema reference
 API_List.md               REST API contract
-Dockerfile                Production multi-stage container
+Dockerfile                Multi-stage production container
 requirements.txt          Python dependencies
 ```
 
 ## Local setup
 
-Prerequisites: Python 3.12+, Node.js 22+, and optionally PostgreSQL.
+Prerequisites: Python 3.12+, Node.js 22+, Git, and optionally PostgreSQL/Docker.
 
 ### Backend
 
-```bash
+```powershell
 python -m venv .venv
-```
-
-Activate the environment:
-
-```bash
-# Windows PowerShell
-.venv\Scripts\Activate.ps1
-
-# macOS/Linux
-source .venv/bin/activate
-```
-
-Install and start:
-
-```bash
-pip install -r requirements.txt
-copy .env.example .env       # Windows
-# cp .env.example .env       # macOS/Linux
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+$env:SEED_DEMO_DATA="true"
 python app.py
 ```
 
-The API runs at `http://localhost:5000`. If `DATABASE_URL` is not set, the application uses a local SQLite database and creates its tables automatically.
+The API runs at `http://127.0.0.1:5000`. Without `DATABASE_URL`, the application uses local SQLite.
 
-### Frontend development server
+### Frontend
 
 In another terminal:
 
-```bash
+```powershell
 cd frontend
-npm install
-copy .env.example .env       # Windows
-# cp .env.example .env       # macOS/Linux
-npm run dev
+npm.cmd install
+npm.cmd run dev
 ```
 
-Open `http://localhost:5173`.
+Open the exact URL printed by Vite, normally `http://localhost:5173`.
+
+See [System Setup Instructions](docs/02-system-setup.md) for PostgreSQL, environment variables, Docker, Azure, secrets, and validation.
 
 ## Environment variables
 
 | Variable | Purpose | Local example |
 |---|---|---|
-| `DATABASE_URL` | SQLAlchemy database connection | `postgresql+psycopg://postgres:password@localhost:5432/studio_management` |
-| `FRONTEND_ORIGINS` | Comma-separated CORS allowlist | `http://localhost:5173` |
-| `VITE_API_BASE_URL` | Frontend API location during development | `http://localhost:5000/api` |
-| `SEED_DEMO_DATA` | Load the idempotent capstone demonstration records | `true` |
+| `DATABASE_URL` | SQLAlchemy connection | `postgresql+psycopg://user:password@localhost:5432/studio_management` |
+| `FRONTEND_ORIGINS` | API CORS allowlist | `http://localhost:5173` |
+| `VITE_API_BASE_URL` | Vite development API root | `http://127.0.0.1:5000/api` |
+| `SEED_DEMO_DATA` | Load idempotent capstone records | `true` |
 
-Real credentials belong only in local environment files or the cloud secret manager. `.env` files are excluded from Git.
-
-Demo seeding is enabled by default for the capstone presentation. Set
-`SEED_DEMO_DATA=false` in Azure after the expo to stop loading demonstration records.
-
-## API endpoints
-
-| Method | Endpoint | Purpose |
-|---|---|---|
-| `GET`, `POST` | `/api/bookings` | List or create bookings |
-| `GET`, `PUT`, `DELETE` | `/api/bookings/<id>` | Retrieve, update, or delete one booking |
-| `GET`, `POST` | `/api/clients` | List or create clients |
-| `GET`, `PUT`, `DELETE` | `/api/clients/<id>` | Retrieve, update, or delete one client |
-| `GET`, `POST` | `/api/orders` | List or submit merchandise orders |
-| `PUT` | `/api/orders/<id>` | Advance an order through the production pipeline |
-| `POST` | `/api/photos/<id>/analyze` | Generate consent-gated photo suggestions |
-| `PUT` | `/api/photos/<id>/analysis` | Record human approval of AI suggestions |
-| `GET` | `/health` | Deployment health check |
-
-See `API_List.md` for request and response examples.
+Never commit real credentials. Local `.env` files are excluded from Git; production values belong in managed cloud/repository secrets.
 
 ## Testing
 
-Run the automated API suite from the repository root:
-
-```bash
+```powershell
 python -m unittest discover -s tests -v
-```
-
-Build the production frontend:
-
-```bash
 cd frontend
-npm run build
+npm.cmd run build
 ```
 
-The evidence package is in:
+Current verified result: **15 Python tests passed**, the React production build passed, and read-only production smoke checks passed on August 25, 2026. See [Production Support and Testing Scenarios](docs/01-production-support-and-testing.md).
 
-- `docs/test-results.md`
-- `docs/troubleshooting.md`
-- `docs/cloud-run-deployment.md`
-- `docs/dry-run-script.md`
+## Production boundaries
 
-The current automated result is **12 tests passed**. Cloud-result cells must be completed only after testing the public deployment.
+- Checkout creates demonstration orders; it does not collect payment or contact a print vendor/carrier.
+- Authentication and role-based authorization are not yet implemented.
+- Social links are user-supplied URLs, not imported social feeds.
+- AI suggestions are consent-gated drafts requiring human approval.
+- Demo media ships in the container; durable object storage is future work.
 
-## Production container
+See [Security Considerations](docs/07-security-considerations.md) for the pre-launch requirements.
 
-```bash
-docker build -t photos-by-greg .
-docker run -p 8080:8080 --env-file .env photos-by-greg
-```
-
-Open `http://localhost:8080` and verify `http://localhost:8080/health`.
-
-## Known limitations and next steps
-
-- Administrative actions are not yet protected by authentication or roles.
-- Email/calendar confirmations are future enhancements.
-- Cloud deployment requires a managed PostgreSQL database and platform secrets.
-- Google OAuth was optional for Module 7 and is not claimed as implemented.
-
-## Presentation
-
-Use `docs/dry-run-script.md` for the 7–8 minute Milestone 4 dry run. Demonstrate the deployed React form, database persistence after refresh, status update, invalid input, deletion, Network panel, and one debugging example.

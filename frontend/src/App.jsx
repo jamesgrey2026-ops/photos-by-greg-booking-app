@@ -1115,7 +1115,10 @@ function PlatformView({ view, onNavigate }) {
     const visible = data.galleries.filter((gallery) => gallery.published || gallery.galleryType === "public");
     return <main className="platform-main"><header className="platform-heading"><div><p className="eyebrow">Selected work</p><h1>Photography portfolio</h1><p>Only images with recorded portfolio permission should be published here.</p></div></header><section className="gallery-grid">{visible.length ? visible.map((gallery) => {
       const graduationGallery = `${gallery.category || ""} ${gallery.title || ""}`.toLowerCase().includes("graduation");
-      return <article className={`gallery-card${graduationGallery ? " graduation-gallery-card" : ""}`} key={gallery.id}><div className="gallery-cover">{gallery.photos[0] ? <img src={gallery.photos[0].imageUrl} alt={gallery.photos[0].title || gallery.title} /> : <span>Photo gallery</span>}</div><div className="gallery-caption"><p className="eyebrow">{gallery.category || "Featured work"}</p><h2>{gallery.title}</h2><span>{gallery.photos.length} photographs</span></div></article>;
+      const graduationImageStyle = graduationGallery
+        ? { objectFit: "contain", objectPosition: "center", backgroundColor: "#171717" }
+        : undefined;
+      return <article className={`gallery-card${graduationGallery ? " graduation-gallery-card" : ""}`} key={gallery.id}><div className="gallery-cover">{gallery.photos[0] ? <img src={gallery.photos[0].imageUrl} alt={gallery.photos[0].title || gallery.title} style={graduationImageStyle} /> : <span>Photo gallery</span>}</div><div className="gallery-caption"><p className="eyebrow">{gallery.category || "Featured work"}</p><h2>{gallery.title}</h2><span>{gallery.photos.length} photographs</span></div></article>;
     }) : <EmptyState>Portfolio projects will appear after a gallery is published with approved photographs.</EmptyState>}</section></main>;
   }
 

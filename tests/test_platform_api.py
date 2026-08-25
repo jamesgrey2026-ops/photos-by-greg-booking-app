@@ -149,6 +149,23 @@ class EnhancedPlatformTests(unittest.TestCase):
             "Graduation Photo Cube", "Custom Photo Sticker Pack", "Keepsake Photo Magnet",
         }.issubset(names))
 
+    def test_demo_portfolio_includes_family_and_picture_day_photos(self):
+        with self.app.app_context():
+            seed_demo_data()
+        galleries = self.client.get("/api/galleries").get_json()
+        photos_by_title = {
+            gallery["title"]: gallery["photos"]
+            for gallery in galleries
+        }
+        self.assertEqual(
+            photos_by_title["Family Stories"][0]["imageUrl"],
+            "/demo/family-stories-portrait.jpg",
+        )
+        self.assertEqual(
+            photos_by_title["Picture Day Highlights"][0]["imageUrl"],
+            "/demo/picture-day-class.jpg",
+        )
+
     def test_ai_photo_assistant_requires_consent_and_human_approval(self):
         gallery = self.client.post("/api/galleries", json={"title": "Graduation", "category": "Graduation"}).get_json()
         blocked = self.client.post("/api/photos", json={

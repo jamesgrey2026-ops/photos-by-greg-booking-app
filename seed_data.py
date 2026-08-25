@@ -83,6 +83,24 @@ def seed_demo_data():
     second_photo.portfolio_consent = True
     second_photo.merchandise_allowed = True
 
+    family_photo = first_or_create(
+        Photo, gallery_id=galleries[1].id, title="Chicago Family Stories",
+        defaults={"image_url": "/demo/family-stories-portrait.jpg", "portfolio_consent": True,
+                  "merchandise_allowed": True},
+    )
+    family_photo.image_url = "/demo/family-stories-portrait.jpg"
+    family_photo.portfolio_consent = True
+    family_photo.merchandise_allowed = True
+
+    picture_day_photo = first_or_create(
+        Photo, gallery_id=galleries[2].id, title="Picture Day Class Portrait",
+        defaults={"image_url": "/demo/picture-day-class.jpg", "portfolio_consent": True,
+                  "merchandise_allowed": True},
+    )
+    picture_day_photo.image_url = "/demo/picture-day-class.jpg"
+    picture_day_photo.portfolio_consent = True
+    picture_day_photo.merchandise_allowed = True
+
     product_specs = [
         ("Classic Photo T-Shirt", "Shirts", 2999),
         ("Premium Photo Hoodie", "Apparel", 5499),

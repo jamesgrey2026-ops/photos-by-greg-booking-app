@@ -93,7 +93,6 @@ body {
 .gallery-caption .eyebrow { margin: 0; }
 .gallery-caption > span { display: block; }
 .graduation-gallery-card .gallery-cover { background: #171717; }
-.graduation-gallery-card .gallery-cover img { object-fit: contain; object-position: center; }
 .gallery-card h2, .product-card h2, .profile-card h2 { margin: 8px 0; font-family: Georgia, serif; }
 .product-art { display: grid; height: 180px; margin-bottom: 18px; border-radius: 8px; color: #dda03a; background: #242321; font-family: Georgia, serif; font-size: 2.2rem; place-items: center; }
 .product-card > span { color: #746c63; font-size: 0.72rem; text-transform: uppercase; }

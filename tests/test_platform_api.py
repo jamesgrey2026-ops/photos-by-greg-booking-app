@@ -165,6 +165,10 @@ class EnhancedPlatformTests(unittest.TestCase):
             photos_by_title["Picture Day Highlights"][0]["imageUrl"],
             "/demo/picture-day-class.jpg",
         )
+        self.assertEqual(
+            photos_by_title["Graduation Celebration"][0]["imageUrl"],
+            "/demo/northwestern-graduation-group.jpg",
+        )
 
     def test_ai_photo_assistant_requires_consent_and_human_approval(self):
         gallery = self.client.post("/api/galleries", json={"title": "Graduation", "category": "Graduation"}).get_json()

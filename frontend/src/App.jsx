@@ -1118,7 +1118,13 @@ function PlatformView({ view, onNavigate }) {
       const graduationImageStyle = graduationGallery
         ? { objectFit: "contain", objectPosition: "center", backgroundColor: "#171717" }
         : undefined;
-      return <article className={`gallery-card${graduationGallery ? " graduation-gallery-card" : ""}`} key={gallery.id}><div className="gallery-cover">{gallery.photos[0] ? <img src={gallery.photos[0].imageUrl} alt={gallery.photos[0].title || gallery.title} style={graduationImageStyle} /> : <span>Photo gallery</span>}</div><div className="gallery-caption"><p className="eyebrow">{gallery.category || "Featured work"}</p><h2>{gallery.title}</h2><span>{gallery.photos.length} photographs</span></div></article>;
+      const portfolioCoverUrl = graduationGallery
+        ? "/demo/graduation-celebration-generated.jpg"
+        : gallery.photos[0]?.imageUrl;
+      const portfolioCoverAlt = graduationGallery
+        ? "Four fictional graduates celebrating together"
+        : gallery.photos[0]?.title || gallery.title;
+      return <article className={`gallery-card${graduationGallery ? " graduation-gallery-card" : ""}`} key={gallery.id}><div className="gallery-cover">{portfolioCoverUrl ? <img src={portfolioCoverUrl} alt={portfolioCoverAlt} style={graduationImageStyle} /> : <span>Photo gallery</span>}</div><div className="gallery-caption"><p className="eyebrow">{gallery.category || "Featured work"}</p><h2>{gallery.title}</h2><span>{gallery.photos.length} photographs</span></div></article>;
     }) : <EmptyState>Portfolio projects will appear after a gallery is published with approved photographs.</EmptyState>}</section></main>;
   }
 
